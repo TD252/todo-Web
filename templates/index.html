@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TaskForge</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div class="app-shell">
+        <header>
+            <div>
+                <h1>TaskForge</h1>
+                <p>Manage priorities, deadlines, and task progress with dark mode clarity.</p>
+            </div>
+            <div class="filter-bar">
+                <a href="?filter=all&sort={{ current_sort }}" class="tab {{ 'active' if current_filter == 'all' else '' }}">All</a>
+                <a href="?filter=active&sort={{ current_sort }}" class="tab {{ 'active' if current_filter == 'active' else '' }}">Active</a>
+                <a href="?filter=completed&sort={{ current_sort }}" class="tab {{ 'active' if current_filter == 'completed' else '' }}">Completed</a>
+                <a href="?filter=overdue&sort={{ current_sort }}" class="tab {{ 'active' if current_filter == 'overdue' else '' }}">Overdue</a>
+            </div>
+            <div class="sort-bar">
+                <span>Sort:</span>
+                <a href="?filter={{ current_filter }}&sort=created" class="sort-button {{ 'selected' if current_sort == 'created' else '' }}">Newest</a>
+                <a href="?filter={{ current_filter }}&sort=deadline" class="sort-button {{ 'selected' if current_sort == 'deadline' else '' }}">Deadline</a>
+                <a href="?filter={{ current_filter }}&sort=priority" class="sort-button {{ 'selected' if current_sort == 'priority' else '' }}">Priority</a>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="flash">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <section class="grid-layout">
+            <article class="card card-form">
+                <h2>Create a new task</h2>
+                <form action="{{ url_for('add_task') }}" method="post">
+                    <label for="title">Title *</label>
+                    <input id="title" name="title" type="text" placeholder="Task title" required />
+
+                    <label for="priority">Priority</label>
+                    <select id="priority" name="priority">
+                        <option value="High">High</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+
+                    <label for="deadline">Deadline</label>
+                    <input id="deadline" name="deadline" type="date" />
+
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" name="notes" rows="4" placeholder="Optional task notes"></textarea>
+
+                    <button type="submit" class="primary-button">Add Task</button>
+                </form>
+            </article>
+
+            <article class="card card-tasks">
+                <div class="section-header">
+                    <h2>Tasks</h2>
+                    <span class="task-count">{{ tasks|length }} items</span>
+                </div>
+
+                {% if tasks %}
+                    <div class="tasks-list">
+                        {% for task in tasks %}
+                            <div class="task-card {{ 'overdue' if task.is_overdue else '' }} {{ 'completed' if task.is_complete else '' }}">
+                                <div class="task-card-top">
+                                    <div>
+                                        <h3>{{ task.title }}</h3>
+                                        <div class="badges">
+                                            <span class="badge priority {{ task.priority|lower }}">{{ task.priority }}</span>
+                                            {% if task.is_complete %}
+                                                <span class="badge status complete">Completed</span>
+                                            {% elif task.is_overdue %}
+                                                <span class="badge status overdue">Overdue</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="actions">
+                                        <form action="{{ url_for('toggle_complete', task_id=task.id) }}" method="post">
+                                            <button type="submit" class="icon-button complete" title="Toggle complete">✔</button>
+                                        </form>
+                                        <form action="{{ url_for('delete_task', task_id=task.id) }}" method="post">
+                                            <button type="submit" class="icon-button delete" title="Delete task">🗑</button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <div class="task-meta">
+                                    <span>Deadline: {{ task.deadline or 'None' }}</span>
+                                    <span>
+                                        {% if task.deadline %}
+                                            {% if task.days_remaining >= 0 %}
+                                                {{ task.days_remaining }} day{{ 's' if task.days_remaining != 1 else '' }} remaining
+                                            {% else %}
+                                                {{ task.days_remaining | abs }} day{{ 's' if task.days_remaining != -1 else '' }} late
+                                            {% endif %}
+                                        {% else %}
+                                            No deadline
+                                        {% endif %}
+                                    </span>
+                                </div>
+
+                                {% if task.notes %}
+                                    <p class="task-notes">{{ task.notes }}</p>
+                                {% endif %}
+
+                                <div class="task-actions">
+                                    <a href="{{ url_for('edit_task', task_id=task.id) }}" class="secondary-button">Edit</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="empty-state">No tasks found. Add one to get started.</p>
+                {% endif %}
+            </article>
+        </section>
+    </div>
+</body>
+</html>
